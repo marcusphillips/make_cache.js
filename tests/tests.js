@@ -1,5 +1,9 @@
 module("makeCache");
 
+if(typeof MODULE === 'undefined'){
+  alert('MODULE is not defined - did you run "git submodule init" and "git submodule update"?');
+}
+
 test("cache", function(){
   // todo: test cache.fallback
   var cache = makeCache({limit:3});
