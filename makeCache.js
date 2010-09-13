@@ -1,5 +1,6 @@
 /*!
  * makeCache JavaScript Library
+ * Version 1.0
  * http://github.com/marcusphillips/makeCache
  *
  * Copyright 2010, Marcus Phillips
