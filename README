@@ -1,0 +1,21 @@
+makeCache allows you to generate caching objects with timed expirey and LRU eviction.
+
+Examples:
+
+// Items can expire
+var cache = makeCache();
+cache.get('a'); // => undefined
+cache.set('a', 1, {expireIn:1000});
+cache.get('a'); // => 1
+setTimeout(function(){
+  cache.get('a'); // => undefined
+}, 1100);
+
+// Caches can be limited in size
+// Least-recently-used items will evict automatically
+var smallCache = makeCache({limit:2});
+smallCache.set('a', 1);
+smallCache.get('a'); // => 1
+smallCache.set('b', 2);
+smallCache.set('c', 3);
+smallCache.get('a'); // => undefined
