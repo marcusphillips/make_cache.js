@@ -7,6 +7,7 @@
  * Dual licensed under the MIT or GPL Version 2 licenses.
  *
  * Dependencies:
+ * 
  * MODULE (http://github.com/marcusphillips/module.js)
  * HotDate (http://github.com/marcusphillips/hot_date.js)
  */
