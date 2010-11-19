@@ -1,12 +1,14 @@
 /*!
  * makeCache JavaScript Library
  * Version 1.0
- * http://github.com/marcusphillips/makeCache
+ * http://github.com/marcusphillips/make_cache.js
  *
  * Copyright 2010, Marcus Phillips
  * Dual licensed under the MIT or GPL Version 2 licenses.
  *
- * Dependencies: MOD (http://github.com/marcusphillips/MOD)
+ * Dependencies:
+ * MODULE (http://github.com/marcusphillips/module.js)
+ * HotDate (http://github.com/marcusphillips/hot_date.js)
  */
 
 MODULE('makeCache', {
@@ -20,9 +22,22 @@ MODULE('makeCache', {
 }, function(moduleConfig){
 
 
+  var undefined;
+
+  var unconstructable = function(maker){
+    var me;
+    return me = function(){
+      if(this instanceof me){
+        throw new Error('You tried to call new on a maker function!');
+      }
+      return maker.apply(this, arguments);
+    };
+  };
+
+
   // library definition
 
-  return function(options) {
+  return unconstructable(function(options) {
 
     options = options || {};
 
@@ -47,9 +62,11 @@ MODULE('makeCache', {
         key: key,
         value: val
       };
-
-      if(options.expireIn || moduleConfig.defaultExpireIn){
-        _.items[key].expireAt = new Date().getTime() + (options.expireIn || moduleConfig.defaultExpireIn);
+      var expireIn = (options.expireIn || moduleConfig.defaultExpireIn);
+      if(expireIn){
+        // todo: if we visit the expire at for the exact time, we are uncertain of evicting expired objects
+        // we might iterate over the bucket half way through the epoch
+        _.items[key].expireAt = new HotDate().add(expireIn);
         _.expireAt(key, _.items[key].expireAt);
       }
 
@@ -83,21 +100,23 @@ MODULE('makeCache', {
 
       limit: options.limit,
 
-      inception: new Date().getTime(),
+      inception: new HotDate(),
 
+      // maximum exact integer is 2^31-1, 10 is headroom
       // this is used as a limit for epoch keys before they cycle through and use new ones
-      maxInt: Math.pow(2, 31)-1,
+      maxInt: 2147483647 - 10,
 
       expireAt: function(key, time){
         var epoch = _.getEpoch(time);
-        (_.pendingEvictions[epoch] = _.pendingEvictions[epoch] || []).push(key);
+        _.pendingEvictions[epoch] = _.pendingEvictions[epoch] || [];
+        _.pendingEvictions[epoch].push(key);
       },
 
       checkExpirey: function(key) {
         if (
           _.items[key] &&
           _.items[key].expireAt &&
-          _.items[key].expireAt < new Date().getTime()
+          _.items[key].expireAt.hasPassed()
         ) {
           remove(key);
         }
@@ -112,24 +131,25 @@ MODULE('makeCache', {
       },
 
       evictExpireds: function(){
-        var currentEpoch = _.getEpoch(new Date().getTime());
+        var completedEpoch = _.getEpoch(new HotDate()) - 1;
+        if(completedEpoch === -1){ return; }
+        // todo: too many possible epochs - iterating over them makes script unresponsive
         for(
           var epoch = (_.evictedEpoch + 1) % _.maxInt;
-          epoch !== currentEpoch;
+          epoch !== completedEpoch + 1 % _.maxInt;
           epoch = (epoch+1) % _.maxInt
         ){
-          var pendingEvictions = _.pendingEvictions[epoch];
-          if(pendingEvictions){
-            for(var whichKey = 0; whichKey < pendingEvictions.length; whichKey++){
-              _.checkExpirey(pendingEvictions[whichKey]);
-            }
+          var pendingEvictions = _.pendingEvictions[epoch] || [];
+          for(var whichKey = 0; whichKey < pendingEvictions.length; whichKey++){
+            _.checkExpirey(pendingEvictions[whichKey]);
           }
-          _.evictedEpoch = epoch;
           delete _.pendingEvictions[epoch];
+          _.evictedEpoch = epoch;
         }
       },
 
       getEpoch: function(time){
+        // todo: time is arbitrarily large - math might be approximate
         var longevity = time - _.inception;
         var partialEpochLongevity = longevity % _.evictionInterval;
         var epoch = ((longevity - partialEpochLongevity) / _.evictionInterval) + 1;
@@ -140,11 +160,11 @@ MODULE('makeCache', {
       appendUse: function(key){
         var item = _.items[key];
         if(item.newer || item.older){ throw new Error('You tried to append a use without removing it first'); }
-        if(typeof _.newest !== 'undefined'){
+        if(_.newest === undefined){
+          _.oldest = key;
+        }else{
           item.older = _.newest;
           _.items[_.newest].newer = key;
-        }else{
-          _.oldest = key;
         }
         _.newest = key;
       },
@@ -187,6 +207,6 @@ MODULE('makeCache', {
 
     return result;
 
-  };
+  });
 
 });
