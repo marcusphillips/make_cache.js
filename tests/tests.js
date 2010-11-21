@@ -39,7 +39,6 @@ test("cache", function(){
 
 });
 
-
 test("cache expiration", function(){
   var cache = makeCache();
 

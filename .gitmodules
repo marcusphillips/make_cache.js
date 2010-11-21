@@ -1,3 +1,6 @@
 [submodule "module"]
 	path = module
 	url = git://github.com/marcusphillips/MODULE.git
+[submodule "deps/hot_date"]
+	path = deps/hot_date
+	url = git@github.com:marcusphillips/hot_date.js
